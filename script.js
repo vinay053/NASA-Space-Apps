@@ -1,35 +1,31 @@
-// server.js
-const express = require('express');
-const fetch = require('node-fetch'); // or "npm i node-fetch"
-const cors = require('cors');
+async function loadWeather() {
+  const container = document.getElementById('data');
+  container.innerHTML = 'Loading...';
 
-const app = express();
-const PORT = 3000;
-
-app.use(cors()); // Allow browser to access server
-
-// Route to get configuration
-app.get('/config', async (req, res) => {
   try {
-    const response = await fetch('https://power.larc.nasa.gov/api/temporal/hourly/configuration');
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    // 1. Get configuration
+    const configResp = await fetch('http://localhost:3000/config');
+    const config = await configResp.json();
+    console.log('Config:', config);
 
-// Route to get data
-app.get('/data', async (req, res) => {
-  try {
-    const { start, end, lat, lon, community, parameters } = req.query;
-    const apiUrl = `https://power.larc.nasa.gov/api/temporal/hourly/point?start=${start}&end=${end}&latitude=${lat}&longitude=${lon}&community=${community}&parameters=${parameters}&format=json&units=metric`;
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    // Pick some default parameter from config
+    const defaultParam = 'T2M_MAX';
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    // 2. Get data
+    const dataResp = await fetch(`http://localhost:3000/data?start=20250920&end=20250921&lat=22.7196&lon=75.8577&community=ag&parameters=${defaultParam}`);
+    const data = await dataResp.json();
+    console.log('Data:', data);
+
+    // 3. Render
+    container.innerHTML = '';
+    for (let param in data.properties.parameter) {
+      const div = document.createElement('div');
+      div.className = 'param';
+      div.innerHTML = `<strong>${param}</strong>: ${JSON.stringify(data.properties.parameter[param])}`;
+      container.appendChild(div);
+    }
+
+  } catch (err) {
+    container.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
+  }
+}
