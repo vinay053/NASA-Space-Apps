@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NASA POWER Hourly Weather</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f0f2f5; }
+  h1 { color: #333; }
+  .data { margin-top: 20px; }
+  .param { padding: 10px; background: #fff; margin: 5px 0; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+
+<h1>NASA POWER Hourly Weather</h1>
+<button id="loadBtn">Load Configuration & Data</button>
+
+<div id="data" class="data"></div>
+
+<script>
+const configApi = 'https://power.larc.nasa.gov/api/temporal/hourly/configuration';
+const dataApi = 'https://power.larc.nasa.gov/api/temporal/hourly/point';
+
+async function loadWeather() {
+  const container = document.getElementById('data');
+  container.innerHTML = 'Loading...';
+
+  try {
+    // Step 1: Get configuration
+    const configResp = await fetch(configApi);
+    const config = await configResp.json();
+    console.log('Config:', config);
+
+    // For demo, pick a fixed example location & parameter
+    const params = new URLSearchParams({
+      start: '20250920',
+      end: '20250921',
+      latitude: '22.7196',
+      longitude: '75.8577',
+      community: 'ag',
+      parameters: 'T2M_MAX,T2M_MIN,WS10M',
+      format: 'json',
+      units: 'metric'
+    });
+
+    // Step 2: Get data
+    const dataResp = await fetch(`${dataApi}?${params.toString()}`);
+    const data = await dataResp.json();
+    console.log('Data:', data);
+
+    // Step 3: Render data
+    container.innerHTML = '';
+    for (let param in data.properties.parameter) {
+      const div = document.createElement('div');
+      div.className = 'param';
+      div.innerHTML = `<strong>${param}</strong>: ${JSON.stringify(data.properties.parameter[param])}`;
+      container.appendChild(div);
+    }
+
+  } catch (err) {
+    container.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
+  }
+}
+
+document.getElementById('loadBtn').addEventListener('click', loadWeather);
+</script>
+
+</body>
+</html>
