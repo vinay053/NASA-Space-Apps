@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<title>Weather Dashboard</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          primary: "#000000",
+          "background-light": "#f7f7f7",
+          "background-dark": "#191919"
+        },
+        fontFamily: { display: "Inter" },
+        borderRadius: { DEFAULT: "0.5rem", lg: "1rem", xl: "1.5rem", full: "9999px" }
+      }
+    }
+  };
+</script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="flex h-full min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-80 bg-background-light dark:bg-background-dark p-6 shadow-lg">
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-8">Weather Data Input</h2>
+    <div class="space-y-6">
+      <div>
+        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2" for="lat">Latitude</label>
+        <input id="lat" class="w-full rounded border p-3 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Enter latitude"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2" for="lon">Longitude</label>
+        <input id="lon" class="w-full rounded border p-3 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Enter longitude"/>
+      </div>
+      <div>
+  <label for="month" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Month</label>
+  <select id="month" class="w-full rounded border p-3 text-sm text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary">
+    <option value="0">January</option>
+    <option value="1">February</option>
+    <option value="2">March</option>
+    <option value="3">April</option>
+    <option value="4">May</option>
+    <option value="5">June</option>
+    <option value="6">July</option>
+    <option value="7">August</option>
+    <option value="8">September</option>
+    <option value="9">October</option>
+    <option value="10">November</option>
+    <option value="11">December</option>
+  </select>
+</div>
+
+<div>
+  <label for="year" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Year</label>
+  <input id="year" type="number" min="2000" max="2100" value="2025" class="w-full rounded border p-3 text-sm text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary"/>
+</div>
+      <button id="generateBtn" class="w-full bg-primary text-white font-bold py-3 px-4 rounded hover:bg-primary/90 transition-colors duration-300">Generate Report</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 p-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold text-slate-800 dark:text-white">Weather Data Analysis</h1>
+    </header>
+
+    <!-- Summary Cards -->
+    <section class="mb-8">
+      <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4">Summary</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Max/Min/Avg Temperature</p>
+          <p id="tempSummary" class="text-3xl font-bold text-slate-800 dark:text-white">-</p>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Max Wind Speed</p>
+          <p id="windSummary" class="text-3xl font-bold text-slate-800 dark:text-white">-</p>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Max Humidity</p>
+          <p id="humiditySummary" class="text-3xl font-bold text-slate-800 dark:text-white">-</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hourly Data -->
+    <section class="mb-8">
+      <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4">Hourly Data</h3>
+      <div class="mb-6">
+        <div id="data"></div>
+
+  <canvas id="weatherChart" class="bg-white dark:bg-slate-900 rounded-lg shadow" height="250"></canvas>
+
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+    <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Temperature</p>
+    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
+      <div id="tempBar" class="bg-red-500 h-4 rounded-full" style="width:0%"></div>
+    </div>
+    <p id="tempBarText" class="text-sm text-slate-700 dark:text-slate-200">-</p>
+  </div>
+  <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+    <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Wind</p>
+    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
+      <div id="windBar" class="bg-blue-500 h-4 rounded-full" style="width:0%"></div>
+    </div>
+    <p id="windBarText" class="text-sm text-slate-700 dark:text-slate-200">-</p>
+  </div>
+  <div class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow">
+    <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Humidity</p>
+    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 mb-2">
+      <div id="humidityBar" class="bg-green-500 h-4 rounded-full" style="width:0%"></div>
+    </div>
+    <p id="humidityBarText" class="text-sm text-slate-700 dark:text-slate-200">-</p>
+  </div>
+</div>
+
+    </section>
+
+    <!-- Report Summary -->
+    <section>
+      <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-4">Report Summary</h3>
+      <div id="reportSummary" class="bg-white dark:bg-slate-900 rounded-lg p-6 shadow text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        Enter data and click "Generate Report"
+      </div>
+      <button id="predictTomorrowBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded hover:bg-blue-500 transition-colors duration-300 mt-4">
+  Predict Tomorrow's Weather
+</button>
+
+    </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+
+
+
+</body>
+</html>
