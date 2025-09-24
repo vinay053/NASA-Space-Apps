@@ -1,6 +1,7 @@
 // --------------------
 // Helper: Get location
 // --------------------
+const url = `/.netlify/functions/weather?lat=${lat}&lon=${lon}&start=${start}&end=${end}&parameters=${parameters}`;
 async function getLocation() {
   if (navigator.geolocation) {
     try {
