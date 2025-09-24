@@ -27,9 +27,9 @@ function aggregateDaily(hoursData) {
     const t = Number(hoursData.T2M[dt]);
     const w = Number(hoursData.WS10M[dt]);
     const h = Number(hoursData.RH2M[dt]);
-    if (isNaN(t) || isNaN(w) || isNaN(h)) continue; // skip invalid entries
+    if (isNaN(t) || isNaN(w) || isNaN(h)) continue;
 
-    const date = dt.slice(0, 8); // YYYYMMDD
+    const date = dt.slice(0, 8);
     if (!daily[date]) daily[date] = { temp: [], wind: [], humidity: [] };
     daily[date].temp.push(t);
     daily[date].wind.push(w);
@@ -41,7 +41,7 @@ function aggregateDaily(hoursData) {
     const t = daily[date].temp;
     const w = daily[date].wind;
     const h = daily[date].humidity;
-    if (!t.length || !w.length || !h.length) continue; // skip empty days
+    if (!t.length || !w.length || !h.length) continue;
     result.push({
       date,
       temp_min: Math.min(...t),
@@ -54,7 +54,6 @@ function aggregateDaily(hoursData) {
 
   return result.sort((a, b) => a.date - b.date);
 }
-
 
 // --------------------
 // Simple linear regression prediction
@@ -70,13 +69,26 @@ function predictTomorrow(dailyData, key) {
   const denominator = x.map(xi => Math.pow(xi - x_mean, 2)).reduce((a, b) => a + b, 0);
   const slope = numerator / denominator;
   const intercept = y_mean - slope * x_mean;
-  return intercept + slope * (n + 1); // next day
+  return intercept + slope * (n + 1);
+}
+
+// --------------------
+// Fetch weather data from hosted API or Netlify function
+// --------------------
+async function fetchWeatherData(lat, lon, start, end) {
+  const parameters = 'T2M,WS10M,RH2M';
+  // Update this URL to your hosted API or Netlify function
+  const url = `/.netlify/functions/weather?lat=${lat}&lon=${lon}&start=${start}&end=${end}&parameters=${parameters}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch data: ${res.status}`);
+  const data = await res.json();
+  return data.properties.parameter;
 }
 
 // --------------------
 // Generate monthly report
 // --------------------
-let weatherChart = null; // global
+let weatherChart = null;
 
 async function loadWeather() {
   const container = document.getElementById('data');
@@ -100,24 +112,20 @@ async function loadWeather() {
       lon = document.getElementById('lon').value;
     }
 
-    const parameters = 'T2M,WS10M,RH2M';
-    const res = await fetch(`http://localhost:3000/data?start=${start}&end=${end}&lat=${lat}&lon=${lon}&community=ag&parameters=${parameters}`);
-    const data = await res.json();
-    const temps = data.properties.parameter;
+    const temps = await fetchWeatherData(lat, lon, start, end);
 
     const labels = Object.keys(temps.T2M || {});
     const tempValues = Object.values(temps.T2M || {}).map(Number);
     const windValues = Object.values(temps.WS10M || {}).map(Number);
     const humValues = Object.values(temps.RH2M || {}).map(Number);
 
-    // Update summary cards
+    // Summary cards
     document.getElementById('tempSummary').innerText = tempValues.length
       ? `${Math.max(...tempValues)}°C / ${Math.min(...tempValues)}°C / ${Math.round(tempValues.reduce((a, b) => a + b, 0) / tempValues.length)}°C`
       : '-';
     document.getElementById('windSummary').innerText = windValues.length ? `${Math.max(...windValues)} m/s` : '-';
     document.getElementById('humiditySummary').innerText = humValues.length ? `${Math.max(...humValues)}%` : '-';
 
-    // Update progress bars (use percentage of max possible)
     const clamp = (val, max) => Math.min(Math.max(val, 0), max);
     document.getElementById('tempBar').style.width = `${clamp(tempValues[tempValues.length-1], 50)}%`;
     document.getElementById('tempBarText').innerText = `Current: ${tempValues[tempValues.length-1] || '-'}°C`;
@@ -128,7 +136,7 @@ async function loadWeather() {
     document.getElementById('humidityBar').style.width = `${clamp(humValues[humValues.length-1], 100)}%`;
     document.getElementById('humidityBarText').innerText = `Current: ${humValues[humValues.length-1] || '-'}%`;
 
-    // Plot line chart
+    // Plot chart (shrink and allow one dataset at a time)
     if (weatherChart) weatherChart.destroy();
     const ctx = document.getElementById('weatherChart').getContext('2d');
     weatherChart = new Chart(ctx, {
@@ -136,26 +144,36 @@ async function loadWeather() {
       data: {
         labels,
         datasets: [
-          { label: 'Temperature (°C)', data: tempValues, borderColor: 'red', backgroundColor: 'rgba(255, 36, 36, 0.2)', tension: 0.4 },
-          { label: 'Wind (m/s)', data: windValues, borderColor: 'blue', backgroundColor: 'rgba(0, 255, 213, 0.2)', tension: 0.4 },
-          { label: 'Humidity (%)', data: humValues, borderColor: 'green', backgroundColor: 'rgba(0, 140, 255, 0.2)', tension: 0.4 }
+          { label: 'Temperature (°C)', data: tempValues, borderColor: 'red', backgroundColor: 'rgba(255,36,36,0.2)', tension: 0.3, hidden: false },
+          { label: 'Wind (m/s)', data: windValues, borderColor: 'blue', backgroundColor: 'rgba(0,255,213,0.2)', tension: 0.3, hidden: true },
+          { label: 'Humidity (%)', data: humValues, borderColor: 'green', backgroundColor: 'rgba(0,140,255,0.2)', tension: 0.3, hidden: true }
         ]
       },
       options: {
         responsive: true,
-        plugins: { legend: { position: 'top' } },
-        scales: { x: { display: false } } // optional: hide timestamps if too dense
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            onClick: (e, legendItem, legend) => {
+              legend.chart.data.datasets.forEach((ds, idx) => {
+                ds.hidden = idx !== legendItem.datasetIndex;
+              });
+              legend.chart.update();
+            }
+          }
+        },
+        scales: { x: { display: false } }
       }
     });
 
     document.getElementById('reportSummary').innerText = `Weather report for ${start} to ${end} at location (${lat}, ${lon}).`;
-    container.innerHTML = ''; // hide old hourly list
+    container.innerHTML = '';
 
   } catch (err) {
     container.innerHTML = `<span class="text-red-600 dark:text-red-400">Error: ${err.message}</span>`;
   }
 }
-
 
 // --------------------
 // Predict tomorrow's weather
@@ -170,33 +188,20 @@ async function predictTomorrowWeather() {
     if (location) { lat = location.lat; lon = location.lon; }
     else { lat = document.getElementById('lat').value; lon = document.getElementById('lon').value; }
 
-    // Last 30 days
     const today = new Date();
     const end = today.toISOString().slice(0, 10).replaceAll('-', '');
     const startObj = new Date();
     startObj.setDate(today.getDate() - 30);
     const start = startObj.toISOString().slice(0, 10).replaceAll('-', '');
 
-    const parameters = 'T2M,WS10M,RH2M';
-    const res = await fetch(`http://localhost:3000/data?start=${start}&end=${end}&lat=${lat}&lon=${lon}&community=ag&parameters=${parameters}`);
-    const data = await res.json();
-
-    const temps = data.properties.parameter;
-    if (!Object.keys(temps.T2M || {}).length) {
-      container.innerHTML = 'No hourly data found for prediction.';
-      return;
-    }
-
+    const temps = await fetchWeatherData(lat, lon, start, end);
     const dailyData = aggregateDaily(temps);
-
     if (!dailyData.length || dailyData.length < 3) {
       container.innerHTML = 'Not enough data to predict tomorrow.';
       return;
     }
 
-    // Clamp function to avoid unrealistic values
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
-
     const predTemp = clamp(predictTomorrow(dailyData, 'temp_avg'), -50, 50);
     const predWind = clamp(predictTomorrow(dailyData, 'wind_avg'), 0, 60);
     const predHum = clamp(predictTomorrow(dailyData, 'humidity_avg'), 0, 100);
@@ -219,7 +224,6 @@ async function predictTomorrowWeather() {
     container.innerHTML = `<span class="text-red-600 dark:text-red-400">Error: ${err.message}</span>`;
   }
 }
-
 
 // --------------------
 // Event bindings
