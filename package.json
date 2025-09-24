@@ -1,0 +1,27 @@
+{
+  "name": "nasa-space-apps",
+  "version": "1.0.0",
+  "description": "Error:500",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinay053/NASA-Space-Apps.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vinay053/NASA-Space-Apps/issues"
+  },
+  "homepage": "https://github.com/vinay053/NASA-Space-Apps#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0"
+  }
+}
